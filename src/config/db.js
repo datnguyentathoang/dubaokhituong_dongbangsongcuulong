@@ -14,11 +14,28 @@ require("dotenv").config();
 //
 // The old DB_USER/DB_HOST/... vars are no longer required.
 
+// the connection string is required; if it's missing we won't be able
+// to start, so show a helpful message.  This prevents cryptic errors like
+// "client password must be a string" when pg attempts to parse an
+// undefined string.
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error(
+    "❌ DATABASE_URL is not configured. Set it in your environment or .env file.\n" +
+      "For local development you can use e.g. postgres://user:pass@localhost:5432/db",
+  );
+  process.exit(1);
+}
+
 const poolConfig = {
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  connectionString,
+  // only enable SSL when running in production (Render/Supabase).
+  // local Postgres instances often don't support SSL, which caused the
+  // "server does not support SSL connections" error during development.
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
 };
 
 const pool = new Pool(poolConfig);
