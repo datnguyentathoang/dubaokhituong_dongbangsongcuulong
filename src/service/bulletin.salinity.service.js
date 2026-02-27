@@ -14,7 +14,7 @@ class BulletinSalinityService {
           created_at
         FROM bulletins
         ORDER BY created_at DESC
-        LIMIT 2
+        LIMIT 100
       `);
 
       return rows;
