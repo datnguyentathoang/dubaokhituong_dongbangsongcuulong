@@ -1,13 +1,27 @@
 const { Pool } = require("pg");
 require("dotenv").config();
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
+// Render / Supabase provide a single connection string via DATABASE_URL.
+// In production we connect through the Supabase connection pool port (6543)
+// and enable SSL with an insecure certificate acceptance because the
+// managed certificate is self-signed.  This mirrors best practice for
+// Node.js apps running on Render or other platforms.
+//
+// For local development you can still set DATABASE_URL in your `.env` file,
+// for example:
+//
+//   DATABASE_URL=postgres://user:pass@localhost:5432/dbname
+//
+// The old DB_USER/DB_HOST/... vars are no longer required.
+
+const poolConfig = {
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+};
+
+const pool = new Pool(poolConfig);
 
 // Handle pool errors
 pool.on("error", (err) => {
