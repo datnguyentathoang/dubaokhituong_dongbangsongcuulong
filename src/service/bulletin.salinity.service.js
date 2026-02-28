@@ -1,6 +1,34 @@
 "use strict";
 const pool = require("../config/db");
 
+// Helper function to parse various date formats
+function parseDate(dateString) {
+  if (!dateString) return null;
+
+  // Check if format is dd/mm/yyyy
+  const ddmmyyyy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateString);
+  if (ddmmyyyy) {
+    const day = ddmmyyyy[1];
+    const month = ddmmyyyy[2];
+    const year = ddmmyyyy[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Check if format is dd/mm/yy
+  const ddmmyy = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(dateString);
+  if (ddmmyy) {
+    const day = ddmmyy[1];
+    const month = ddmmyy[2];
+    let year = parseInt(ddmmyy[3]);
+    // Assume 20xx if yy < 50, else 19xx
+    year = year < 50 ? 2000 + year : 1900 + year;
+    return `${year}-${month}-${day}`;
+  }
+
+  // Otherwise assume ISO format (YYYY-MM-DD or ISO string)
+  return dateString;
+}
+
 class BulletinSalinityService {
   static async getLatestBulletins() {
     try {
@@ -82,11 +110,12 @@ class BulletinSalinityService {
         throw new Error("Missing fields");
       }
 
-      // Validate date order
-      const fromDateObj = new Date(from_date);
-      const toDateObj = new Date(to_date);
+      // Parse dates from various formats to YYYY-MM-DD
+      const parsedFromDate = parseDate(from_date);
+      const parsedToDate = parseDate(to_date);
 
-      if (fromDateObj > toDateObj) {
+      // Validate date order by comparing string dates (YYYY-MM-DD format)
+      if (parsedFromDate > parsedToDate) {
         throw new Error("from_date must be less than or equal to to_date");
       }
 
@@ -97,7 +126,7 @@ class BulletinSalinityService {
         VALUES ($1, $2, $3, $4, $5)
         RETURNING *
         `,
-        [from_date, to_date, title, content, userId],
+        [parsedFromDate, parsedToDate, title, content, userId],
       );
 
       return rows[0];
@@ -112,12 +141,15 @@ class BulletinSalinityService {
       const { from_date, to_date, title, content } = data;
       if (!id) throw new Error("ID is required");
 
-      // Validate date order if both dates are provided
-      if (from_date && to_date) {
-        const fromDateObj = new Date(from_date);
-        const toDateObj = new Date(to_date);
+      let parsedFromDate = from_date;
+      let parsedToDate = to_date;
 
-        if (fromDateObj > toDateObj) {
+      // Validate and parse dates if both are provided
+      if (from_date && to_date) {
+        parsedFromDate = parseDate(from_date);
+        parsedToDate = parseDate(to_date);
+
+        if (parsedFromDate > parsedToDate) {
           throw new Error("from_date must be less than or equal to to_date");
         }
       }
@@ -132,7 +164,7 @@ class BulletinSalinityService {
         WHERE id = $5
         RETURNING *
         `,
-        [from_date, to_date, title, content, id],
+        [parsedFromDate, parsedToDate, title, content, id],
       );
       return rows[0];
     } catch (err) {
