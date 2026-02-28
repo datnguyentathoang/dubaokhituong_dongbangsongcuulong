@@ -82,6 +82,14 @@ class BulletinSalinityService {
         throw new Error("Missing fields");
       }
 
+      // Validate date order
+      const fromDateObj = new Date(from_date);
+      const toDateObj = new Date(to_date);
+
+      if (fromDateObj > toDateObj) {
+        throw new Error("from_date must be less than or equal to to_date");
+      }
+
       const { rows } = await pool.query(
         `
         INSERT INTO bulletins
@@ -103,6 +111,17 @@ class BulletinSalinityService {
     try {
       const { from_date, to_date, title, content } = data;
       if (!id) throw new Error("ID is required");
+
+      // Validate date order if both dates are provided
+      if (from_date && to_date) {
+        const fromDateObj = new Date(from_date);
+        const toDateObj = new Date(to_date);
+
+        if (fromDateObj > toDateObj) {
+          throw new Error("from_date must be less than or equal to to_date");
+        }
+      }
+
       const { rows } = await pool.query(
         `
         UPDATE bulletins
